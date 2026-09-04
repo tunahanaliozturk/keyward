@@ -1,0 +1,48 @@
+@page
+@model EnrolModel
+@{
+    ViewData["Title"] = Model.BackupCodes.Count > 0 ? "Recovery codes" : "Set up two-factor";
+}
+
+@if (Model.BackupCodes.Count > 0)
+{
+    <p>Your authenticator is set up. Store these recovery codes somewhere safe.</p>
+    <p class="muted">Each one works once, and this is the only time they are shown.</p>
+
+    <div class="codes">
+        @foreach (string code in Model.BackupCodes)
+        {
+            <span>@code</span>
+        }
+    </div>
+
+    <a href="@(Model.ReturnUrl ?? "/")"><button type="button">Continue</button></a>
+}
+else
+{
+    <p class="muted">Scan this with your authenticator app, then enter the code it shows.</p>
+
+    @if (Model.ErrorMessage is not null)
+    {
+        <p class="error">@Model.ErrorMessage</p>
+    }
+
+    @if (Model.QrCodeDataUri is not null)
+    {
+        <img class="qr" src="@Model.QrCodeDataUri" alt="Enrolment QR code" width="200" height="200" />
+    }
+
+    <p class="muted">Cannot scan it? Enter this key by hand: <code>@Model.ManualEntryKey</code></p>
+
+    <form method="post">
+        <input type="hidden" asp-for="ProtectedSecret" />
+        <input type="hidden" asp-for="ReturnUrl" />
+
+        <label asp-for="Code">Code</label>
+        <input asp-for="Code" type="text" inputmode="numeric" autocomplete="one-time-code" autofocus />
+
+        <div class="actions">
+            <button type="submit">Confirm</button>
+        </div>
+    </form>
+}

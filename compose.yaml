@@ -1,0 +1,48 @@
+name: keyward
+
+services:
+  postgres:
+    image: postgres:18-alpine
+    environment:
+      POSTGRES_DB: keyward
+      POSTGRES_USER: keyward
+      POSTGRES_PASSWORD: keyward
+    ports:
+      - "5432:5432"
+    volumes:
+      # Postgres 18 keeps its data in a versioned subdirectory, so the mount goes one level up. Mounting
+      # the old /var/lib/postgresql/data path makes the image refuse to start.
+      - postgres-data:/var/lib/postgresql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U keyward -d keyward"]
+      interval: 5s
+      timeout: 3s
+      retries: 12
+
+  keyward:
+    build:
+      context: .
+    depends_on:
+      postgres:
+        condition: service_healthy
+    ports:
+      - "5100:8080"
+    environment:
+      ASPNETCORE_ENVIRONMENT: Development
+      ConnectionStrings__keyward: Host=postgres;Port=5432;Database=keyward;Username=keyward;Password=keyward
+
+      # Development settings, written out rather than inherited, because every one of them is a decision
+      # that would be wrong on a public host. Migrating on startup races itself during a rolling deploy,
+      # seeding creates accounts with known passwords, and plain HTTP puts credentials on the wire.
+      Keyward__Database__MigrateOnStartup: "true"
+      Keyward__Seed__Enabled: "true"
+      Keyward__AllowInsecureTransport: "true"
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:8080/health/ready || exit 1"]
+      interval: 10s
+      timeout: 3s
+      retries: 10
+      start_period: 20s
+
+volumes:
+  postgres-data:

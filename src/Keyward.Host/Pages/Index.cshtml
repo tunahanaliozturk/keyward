@@ -1,0 +1,25 @@
+@page
+@model IndexModel
+@{
+    ViewData["Title"] = "Identity provider";
+}
+
+@if (Model.SignedInAs is not null)
+{
+    <p>Signed in as <strong>@Model.SignedInAs</strong>.</p>
+    <div class="actions">
+        <a href="/connect/logout"><button type="button" class="secondary">Sign out</button></a>
+    </div>
+}
+else
+{
+    <p>This is an OpenID Connect provider. Applications send people here to sign in.</p>
+    <div class="actions">
+        <a href="/Account/Login"><button type="button">Sign in</button></a>
+    </div>
+}
+
+<p class="muted">
+    Discovery document:
+    <code>/.well-known/openid-configuration</code>
+</p>

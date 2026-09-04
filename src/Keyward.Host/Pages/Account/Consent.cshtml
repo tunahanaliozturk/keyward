@@ -1,0 +1,30 @@
+@page
+@using Keyward.Host.Endpoints
+@model ConsentModel
+@{
+    ViewData["Title"] = "Allow access";
+}
+
+<p><strong>@Model.ClientName</strong> is asking to use your account.</p>
+
+@if (Model.Permissions.Count > 0)
+{
+    <ul class="scopes">
+        @foreach (string permission in Model.Permissions)
+        {
+            <li>@permission</li>
+        }
+    </ul>
+}
+
+<form method="post" action="/connect/authorize" asp-antiforgery="true">
+    @foreach (KeyValuePair<string, string> parameter in Model.Parameters)
+    {
+        <input type="hidden" name="@parameter.Key" value="@parameter.Value" />
+    }
+
+    <div class="actions">
+        <button type="submit" name="@ConnectEndpoints.ConsentAcceptField" value="yes">Allow</button>
+        <button type="submit" name="@ConnectEndpoints.ConsentDenyField" value="yes" class="secondary">Deny</button>
+    </div>
+</form>

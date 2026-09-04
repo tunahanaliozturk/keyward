@@ -1,0 +1,11 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <!--
+      No package references. These types are the vocabulary the rest of the service is written in, and
+      keeping them free of a persistence or protocol dependency is what lets them be unit tested without
+      a database, a browser or a token.
+    -->
+  </PropertyGroup>
+
+</Project>

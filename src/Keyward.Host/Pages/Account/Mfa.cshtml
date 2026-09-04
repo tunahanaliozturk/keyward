@@ -1,0 +1,23 @@
+@page
+@model MfaModel
+@{
+    ViewData["Title"] = "Two-factor check";
+}
+
+<p class="muted">Enter the six-digit code from your authenticator, or one of your recovery codes.</p>
+
+@if (Model.ErrorMessage is not null)
+{
+    <p class="error">@Model.ErrorMessage</p>
+}
+
+<form method="post">
+    <input type="hidden" asp-for="ReturnUrl" />
+
+    <label asp-for="Code">Code</label>
+    <input asp-for="Code" type="text" inputmode="text" autocomplete="one-time-code" autofocus />
+
+    <div class="actions">
+        <button type="submit">Continue</button>
+    </div>
+</form>

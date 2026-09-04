@@ -1,0 +1,140 @@
+name: ci
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+env:
+  DOTNET_NOLOGO: "true"
+  DOTNET_SKIP_FIRST_TIME_EXPERIENCE: "true"
+  DOTNET_CLI_TELEMETRY_OPTOUT: "true"
+
+jobs:
+  build:
+    name: build and unit tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-dotnet@v5
+        with:
+          global-json-file: global.json
+
+      - name: Restore
+        run: dotnet restore
+
+      - name: Build
+        run: dotnet build --configuration Release --no-restore
+
+      # Whitespace and style only. Analyzer-level style is already enforced by EnforceCodeStyleInBuild
+      # with warnings as errors, and running the full formatter here would build a second workspace for
+      # no benefit.
+      - name: Verify formatting
+        run: |
+          dotnet format whitespace --verify-no-changes --no-restore
+          dotnet format style --verify-no-changes --no-restore
+
+      # Reads the licence terms of every package in the tree, at every depth, from the restored packages
+      # on disk. A dependency that carries a commercial subscription or a maintenance fee fails the build
+      # instead of arriving quietly. This is not hypothetical: it is the reason Aspire is pinned below
+      # 13.5 and the reason this project uses OpenIddict rather than Duende.
+      - name: Audit dependency licences
+        run: dotnet run --project tools/Keyward.LicenseAudit --configuration Release --no-build -- .
+
+      - name: Unit tests
+        run: dotnet run --project tests/Keyward.UnitTests --configuration Release --no-build
+
+  integration:
+    name: integration suite
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-dotnet@v5
+        with:
+          global-json-file: global.json
+
+      # Testcontainers starts a real Postgres against the runner's Docker daemon and the provider runs on
+      # a real socket. Half of what this service does happens inside OpenIddict's Entity Framework stores,
+      # and an in-memory provider enforces neither the unique constraints nor the transaction semantics
+      # those stores rely on.
+      - name: Integration tests
+        run: dotnet run --project tests/Keyward.IntegrationTests --configuration Release
+
+  conformance:
+    name: browser conformance
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-dotnet@v5
+        with:
+          global-json-file: global.json
+
+      - name: Build
+        run: dotnet build tests/Keyward.ConformanceTests --configuration Release
+
+      # Playwright installs Chromium on first use, but the system libraries it needs are a separate
+      # concern on a fresh runner.
+      - name: Install browser dependencies
+        run: |
+          pwsh tests/Keyward.ConformanceTests/bin/Release/net10.0/playwright.ps1 install --with-deps chromium
+
+      # A browser starts at the client's redirect, fills the login form that is actually rendered, answers
+      # the consent screen that is actually shown, follows the redirect back, and the token it ends up
+      # with is verified against the published key set. An HTTP client walking the same chain would be
+      # testing the walker.
+      - name: Conformance tests
+        run: dotnet run --project tests/Keyward.ConformanceTests --configuration Release --no-build
+
+  compose:
+    name: docker compose demo
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+
+      # The quick start in the README is a promise. This runs it.
+      - name: Bring the stack up
+        run: docker compose up -d --build
+
+      - name: Wait for the provider
+        run: |
+          for i in $(seq 1 90); do
+            code=$(curl -s -o /dev/null -w "%{http_code}" http://localhost:5100/health/ready || true)
+            if [ "$code" = "200" ]; then echo "up"; exit 0; fi
+            sleep 2
+          done
+          docker compose logs --tail 100
+          exit 1
+
+      - name: The discovery document is spec-shaped
+        run: |
+          doc=$(curl -sf http://localhost:5100/.well-known/openid-configuration)
+          echo "$doc" | jq -e '.issuer' > /dev/null
+          echo "$doc" | jq -e '.code_challenge_methods_supported == ["S256"]' > /dev/null
+          echo "$doc" | jq -r '.grant_types_supported[]'
+
+      - name: The key set publishes public keys only
+        run: |
+          keys=$(curl -sf http://localhost:5100/.well-known/jwks)
+          echo "$keys" | jq -e '.keys | length >= 1' > /dev/null
+          echo "$keys" | jq -e '[.keys[] | has("d")] | any | not' > /dev/null
+
+      - name: A service token is issued, and carries no refresh token
+        run: |
+          response=$(curl -sf -X POST http://localhost:5100/connect/token \
+            -d grant_type=client_credentials \
+            -d client_id=keyward-demo-service \
+            -d 'client_secret=ChangeMe!Service-Secret' \
+            -d scope=api)
+          echo "$response" | jq -e '.access_token' > /dev/null
+          echo "$response" | jq -e 'has("refresh_token") | not' > /dev/null
+
+      - name: Tear down
+        if: always()
+        run: docker compose down -v

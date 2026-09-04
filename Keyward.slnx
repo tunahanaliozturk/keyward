@@ -1,0 +1,20 @@
+<Solution>
+  <Folder Name="/load/">
+    <Project Path="load/Keyward.LoadTests/Keyward.LoadTests.csproj" />
+  </Folder>
+  <Folder Name="/src/">
+    <Project Path="src/Keyward.AppHost/Keyward.AppHost.csproj" />
+    <Project Path="src/Keyward.Data/Keyward.Data.csproj" />
+    <Project Path="src/Keyward.Domain/Keyward.Domain.csproj" />
+    <Project Path="src/Keyward.Host/Keyward.Host.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/Keyward.ConformanceTests/Keyward.ConformanceTests.csproj" />
+    <Project Path="tests/Keyward.IntegrationTests/Keyward.IntegrationTests.csproj" />
+    <Project Path="tests/Keyward.TestSupport/Keyward.TestSupport.csproj" />
+    <Project Path="tests/Keyward.UnitTests/Keyward.UnitTests.csproj" />
+  </Folder>
+  <Folder Name="/tools/">
+    <Project Path="tools/Keyward.LicenseAudit/Keyward.LicenseAudit.csproj" />
+  </Folder>
+</Solution>

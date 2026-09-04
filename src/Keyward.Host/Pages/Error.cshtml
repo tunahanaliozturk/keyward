@@ -1,0 +1,16 @@
+@page
+@model ErrorModel
+@{
+    ViewData["Title"] = "Something went wrong";
+}
+
+<p>The request could not be completed.</p>
+
+@if (Model.TraceId is not null)
+{
+    <p class="muted">Quote this if you report it: <code>@Model.TraceId</code></p>
+}
+
+<div class="actions">
+    <a href="/"><button type="button" class="secondary">Back</button></a>
+</div>

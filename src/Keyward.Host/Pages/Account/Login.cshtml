@@ -1,0 +1,24 @@
+@page
+@model LoginModel
+@{
+    ViewData["Title"] = "Sign in";
+}
+
+@if (Model.ErrorMessage is not null)
+{
+    <p class="error">@Model.ErrorMessage</p>
+}
+
+<form method="post">
+    <input type="hidden" asp-for="ReturnUrl" />
+
+    <label asp-for="Input.Email">Email</label>
+    <input asp-for="Input.Email" type="email" autocomplete="username" autofocus />
+
+    <label asp-for="Input.Password">Password</label>
+    <input asp-for="Input.Password" type="password" autocomplete="current-password" />
+
+    <div class="actions">
+        <button type="submit">Sign in</button>
+    </div>
+</form>
